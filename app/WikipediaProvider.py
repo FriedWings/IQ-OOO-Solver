@@ -13,17 +13,20 @@ class WikipediaProvider:
     #   Obtain data from an online endpoint
     # Input:
     #   @param url: A string representing an endpoint
+    #   @param array_input: A list of strings to append to url
     # Output:
     #   Returns false if there was a problem with obtaining the data, otherwise it returns the data in a JSON format
     #####################
-    @staticmethod
-    def _get_page_data(url):
+    def _get_page_data(self, url, array_input):
+        titles = ""
+        for i in array_input:
+            titles += i.replace(' ', '_') + "|"
+        titles = titles[0:-1]
+
         try:
-            response = requests.get(url)
-            print(response.json())
+            response = requests.get(url + titles)
             return response.json()['query']
         except Exception as e:
-            print(e)
             print("Error connecting to the endpoint. Please check your connection.")
             exit()
 
@@ -37,7 +40,7 @@ class WikipediaProvider:
     #####################
     def _get_page_links(self, title):
         possible_alternatives = []
-        data = self._get_page_data(self.links_url + title)['pages']
+        data = self._get_page_data(self.links_url, [title])['pages']
 
         if 'links' not in data[next(iter(data))]:
             raise KeyError
@@ -63,13 +66,7 @@ class WikipediaProvider:
 
         output = []
 
-        # Replaces spaces with _
-        titles = ""
-        for i in array_input:
-            titles += i.replace(' ', '_') + "|"
-        titles = titles[0:-1]  # Remove trailing |
-
-        data = self._get_page_data(self.category_url + titles)
+        data = self._get_page_data(self.category_url, array_input)
         page_data = data['pages']
 
         if 'redirects' in data:
@@ -139,16 +136,14 @@ class WikipediaProvider:
 
         for depth in range(int(depth_range)):
             string_of_titles = ''
-            # Replace spaces with _
-            for i in to_search:
-                for category in i['categories']:
-                    # check if overlapping titles
-                    string_of_titles += category.replace(' ', '_') + "|"
 
-            string_of_titles = string_of_titles[0:-1]
+            # Get list of titles
+            list_of_titles = []
+            for i in to_search:
+                list_of_titles += i['categories'] 
 
             # Obtain data
-            current_data = self._get_page_data(self.category_url + string_of_titles)['pages']
+            current_data = self._get_page_data(self.category_url, list_of_titles)['pages']
             to_search = []
 
             # Clean up data
